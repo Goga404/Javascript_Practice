@@ -1,0 +1,14 @@
+var languages = {
+    english: "Hello!",
+    french: "Bonjour!",
+    notALanguage: 4,
+    spanish: "Hola!"
+};
+
+// print hello in the 3 different languages
+for (var a in languages) {
+    
+    if(typeof languages[a] == "string") {
+        console.log(languages[a]);
+        }
+    }
