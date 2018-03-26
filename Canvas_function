@@ -1,0 +1,37 @@
+//HTML
+<canvas id="instCanvas" width="193" height="22">
+    <img class="socimg" src="assets/template/images/soc_hdr_sprite.png" alt="sopcial link">
+</canvas>
+<img style="display: none;" id="soc_img" class="socimg" src="assets/template/images/soc_hdr_sprite.png" alt="sopcial link">
+
+
+//JS
+var drawCanvas = function(el, img, x, y,r,g,b) {
+        /* el - element to select, img=canvas image, 
+        x = x-axis coordinate, y = y-axis coordinate 
+        r=red, g=green, b=blue - set image color*/
+        var c = document.querySelector(el);
+        var ctx = c.getContext("2d");
+        ctx.globalCompositeOperation = "source-over";
+        var img = document.querySelector(img);
+        ctx.drawImage(img, x, y);
+        
+        //data manipulation
+        var imgData = ctx.getImageData(0,0,c.width,c.height);
+
+        var imdata = imgData.data;
+
+        // change image color
+        var r,g,b,avg;
+        for(var i = 0, len = imdata.length; i < len; i+=4) {
+            imdata[i]=r;
+            imdata[i+1]=g;
+            imdata[i+2]=b;
+        }
+
+        ctx.putImageData(imgData,0,0);
+    
+    }
+    
+    //use function:
+    drawCanvas("#instCanvas", "#soc_img", -167, 0, 185,40,167);
