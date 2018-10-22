@@ -1,0 +1,211 @@
+// map start: 
+    var myGeoObject = [];
+        mymap = mapopt.maps[0];
+        mymap.state.size = ['100%', 500];
+        mymap.state.center = mymap.state.center.reverse();
+        
+
+    if ($("#jsmap").length && typeof mapopt != "undefined") {
+        ymaps.ready(init);
+        var jsMap, 
+            deliveryZones;
+        
+        function init() {
+            jsMap = new ymaps.Map("jsmap", mymap.state);
+            
+                
+                mymap.geoObjects.features.forEach(function (item, i, arr) {
+                    if(item.geometry.type=='Polygon'){
+                        
+                    var reverseCoord = item.geometry.coordinates[0].map(function (name) {
+                        return name.reverse();
+                    });
+                    
+                    
+                    item.geometry.coordinates[0] = reverseCoord;
+                    deliveryZones = myGeoObject[i] = new ymaps.GeoObject(item);
+                    // console.log(reverseCoord);
+                    jsMap.geoObjects.add(myGeoObject[i]); // установка областей доставки
+                    }else if(item.geometry.type!='Point'){
+                        //console.log(item);
+                        var reverseCoord = item.geometry.coordinates.reverse();
+                        item.geometry.coordinates = reverseCoord;
+                        myGeoObject[i] = new ymaps.GeoObject(item);
+                        jsMap.geoObjects.add(myGeoObject[i]);
+                    }
+                });
+                
+            
+            
+            //set center on load
+            jsMap.setCenter(JSON.parse($("#delivery_start_coordinates").val()));
+            // set zoom
+            jsMap.setZoom(11.5, {duration: 1000});
+            
+            var delivery_start_coord = JSON.parse($("#delivery_start_coordinates").val()); // строку в массив
+            startingPlacemark = new ymaps.Placemark(delivery_start_coord, {
+                    hintContent: 'Адрес пиццерии',
+                    balloonContent: 'Пицца Mojo'
+                }, {
+                    // Опции.
+                    // Необходимо указать данный тип макета.
+                    iconLayout: 'default#image',
+                    // Своё изображение иконки метки.
+                    iconImageHref: 'assets/template/img/mojo.png',
+                    // Размеры метки.
+                    iconImageSize: [30, 42],
+                    // Смещение левого верхнего угла иконки относительно
+                    // её "ножки" (точки привязки).
+                    iconImageOffset: [-5, -38]
+                });
+
+                jsMap.geoObjects.add(startingPlacemark); // ставлю новую метку - адрес пиццерии
+
+
+            //jsMap.behaviors.disable('scrollZoom');
+            // Подключаем поисковые подсказки к полю ввода.
+            var
+            // suggestView = new ymaps.SuggestView('suggest'),
+                    map,
+                    placemark,
+                    addr_str;
+                    
+                    
+                    
+            
+            var suggestView = new ymaps.SuggestView('suggest', { // огранийчения предлогаемых для автозаполнения адресов одним городом
+
+                provider: {
+        
+                    suggest:(function(request, options){
+        
+                        return ymaps.suggest("Беларусь, " + request);
+        
+                          })}
+        
+            });
+            
+            suggestView.events.add("select", function(obj){
+                //вывод полного адреса над полем
+                //console.log(obj.originalEvent);
+                addr_str = obj.originalEvent.item.value;
+                $(".addr_placeholder").html(" ");
+                $(".addr_placeholder").html(addr_str);
+                //$(".total_submit.disabled").removeClass("disabled");
+                geocode();
+                
+                // $("#suggest").focus();
+                // $(document).focus();
+            })
+
+            $("#suggest").bind('blur', function (e) {
+                // console.log($(this).val());
+                geocode();  
+            });
+
+            function geocode() {
+                // Забираем запрос из поля ввода.
+                var request = $('#suggest').val();
+                // if(addr_str){
+                //     var request = addr_str;
+                // }
+                // Геокодируем введённые данные.
+                
+                ymaps.geocode(request
+                , {
+                    boundedBy: [
+                          [53.789054, 27.350829],
+                          [53.978449, 27.690507]
+                    ],
+                    strictBounds: true,
+                    results: 1
+                 }
+                 ).then(function (res) {
+                    var obj = res.geoObjects.get(0),
+                            error, hint;
+                            
+                    var object = res.geoObjects.get(0),
+                        coords = object.geometry.getCoordinates(),
+                        address = object.getAddressLine(),
+                        deliveryAvaliable;
+                        
+                        jsMap.geoObjects.each(function(e){
+
+                            if(typeof e == 'object' && ('geometry' in e)){
+                                var type = e.geometry.getType();
+                                if(type == 'Polygon'){
+                                    if(e.geometry.contains(coords)){
+                                        deliveryAvaliable = true;
+                                        return;
+                                    }
+                                }
+                            }
+                        });
+                        
+                        console.log(deliveryAvaliable);
+                    
+                    if (deliveryAvaliable === true) {
+                        error = 'Адрес входит в зону доставки';
+                        hint = 'Возможна доставка по этому адресу';
+                    } else {
+                        error = 'Доставка по данному адресу невозможна';
+                        hint = 'Уточните адрес';
+                    }
+                        showError(error);
+                        // Если геокодер возвращает пустой массив или неточный результат, то показываем ошибку.
+                        if (error) {
+                            if(typeof obj.geometry.getCoordinates() != 'undefined'){
+                                $(".new_addr_item [name='coord']").val('' + obj.geometry.getCoordinates());
+                            }
+                            showError(error);
+                            showMessage(hint);
+                        } else {
+                            //console.log(obj);
+                            $(".new_addr_item [name='coord']").val('' + obj.geometry.getCoordinates());
+                            showResult(obj);
+                        }
+                    
+                }
+                , function (e) {
+                    console.log(e)
+                })
+
+            }
+
+
+            function showError(message) {
+                
+                    if (message.indexOf("входит") !== -1){
+                        $('#notice').css("color", "green");
+                        valid_addr = true;
+                    } else {
+                        $('#notice').css("color", "red");
+                        valid_addr = false;
+                        //console.log("false addr")
+                    }
+                
+                $('#notice').text(message);
+                $('#notice').css('display', 'block');
+                // Удаляем карту.
+                if (map) {
+                    map.destroy();
+                    map = null;
+                }
+            }
+            
+        }
+    }
+    // map end.
+
+
+
+
+
+
+
+
+
+// где-то глубоко в шаблоне:
+<script type="text/javascript">
+    var mapopt= {"ymj":"1.0","maps":[{"properties":{"sid":"constructor:34482419801ec77dccd71bad36c78e3ad318bd3719137ab07703055bf790246c","created":1538650424,"updated":1539352151,"authorUid":"1130000029205205","access":"public","revision":"119","name":"Radius","description":""},"state":{"size":[1100,500],"center":[27.605496343651062,53.97319188104652],"zoom":12,"type":"yandex#map","traffic":{"shown":false}},"geoObjects":{"type":"FeatureCollection","features":[{"type":"Feature","id":"137189961","properties":{"name":"","description":"","iconContent":"","iconCaption":""},"geometry":{"type":"Polygon","coordinates":[[[27.566025974899013,53.939463384530065],[27.572935345321362,53.93936210173923],[27.575380777952724,53.9389489494434],[27.57950065099959,53.93669532103128],[27.581796621916343,53.935745721877545],[27.59840486013655,53.92984505923319],[27.60284659826523,53.93489739492769],[27.60571060212126,53.93875258212563],[27.614465332345862,53.93648628181807],[27.61738357575403,53.93571393892661],[27.622404671029916,53.932776372502126],[27.623391723947385,53.93130751137872],[27.62643871338831,53.92748316377337],[27.63918427472109,53.93105904840636],[27.639785089540425,53.92933685891689],[27.655577936220112,53.92685475435019],[27.673430719423234,53.92351127706411],[27.67978219037051,53.9248284365985],[27.673259058046288,53.941036211655195],[27.695444966494826,53.94767656491672],[27.688921834170607,53.95451123007048],[27.681883717715547,53.952790013015054],[27.677334691226285,53.95466309873673],[27.67639055365303,53.95845963479039],[27.67586145798189,53.96247032521166],[27.675088981785578,53.96616492964501],[27.672857383885198,53.969555578414074],[27.673458198704537,53.971832724254604],[27.668467891805857,53.97561764360962],[27.671729457967967,53.97703434197193],[27.66984118282148,53.97895692662703],[27.68862370758292,53.98763123457564],[27.689610760500386,53.99205697372803],[27.69025449066396,53.99552136547471],[27.692314427187394,53.998151075342825],[27.692042446982526,53.998642602776535],[27.684130519506105,54.00242512496497],[27.68619045602954,54.00548416566565],[27.68395885812916,54.00874520823353],[27.683272212621347,54.01455883329974],[27.679023593541743,54.01395223229503],[27.67752155649341,54.01688405484149],[27.67623409616626,54.01701042183685],[27.666990515894533,54.015533833215656],[27.662141081995617,54.01568547850823],[27.657094048844918,54.02011707419735],[27.65434746681367,54.01966218533932],[27.618206862081145,53.99324648045816],[27.610224608052828,53.99193149076648],[27.60696304189072,53.986064105360164],[27.576814362550117,53.978362709096366],[27.545710813724025,53.979125670114804],[27.54324318143033,53.97830352645721],[27.541998636447417,53.97925215230771],[27.537342321597578,53.97750666397205],[27.532015234341507,53.98299241310428],[27.528796583523636,53.98191739914315],[27.526672273983834,53.97685813569765],[27.526843935360755,53.97244342408704],[27.52845326076964,53.97087476010809],[27.5327912826515,53.969094877047006],[27.573475028989396,53.97106843258368],[27.57287421417006,53.966159672075456],[27.598644484352977,53.962577144656464],[27.604480971169387,53.967536936183066],[27.619288002906234,53.96262108153166],[27.615940606055652,53.96029281410747],[27.610704934058578,53.959837268243646],[27.60134938901464,53.95538277850276],[27.600920235572275,53.95396534058568],[27.592594658789988,53.953459101015504],[27.592422997413042,53.95581306256698],[27.590491806922316,53.95588899458775],[27.590363060889608,53.958141581342645],[27.588131462989224,53.95804034411258],[27.58753064816989,53.953990652390566],[27.585814034400347,53.95244660337327],[27.5856423730234,53.95107969237784],[27.58165124600924,53.95105437878672],[27.581973111091028,53.95195300181386],[27.568841015754113,53.952155505726324],[27.568841015754113,53.950446847965694],[27.581179177222563,53.95007979378432],[27.57993463223965,53.94772550705999],[27.57630828565149,53.94773816486523],[27.576040064749993,53.94775715157672],[27.574806248603156,53.945700207346896],[27.574173247275635,53.94456726222885],[27.57428053563624,53.944364721297326],[27.56788614934473,53.94190883387937],[27.566770350394524,53.94281398454556],[27.56635192578821,53.942320268446394],[27.56605151837853,53.94180122724315],[27.566025974899013,53.939463384530065]]]},"options":{"zIndex":100000000,"order":100000000,"preset":"fillColor:ed4543cc_strokeColor:ed4543f2_strokeWidth:5"}},{"type":"Feature","id":"137194692","properties":{"name":"","description":"","iconContent":"","iconCaption":"Pizza Mojo"},"geometry":{"type":"Point","coordinates":[27.627275255942774,53.96134109007542]},"options":{"zIndex":800000000,"order":800000000,"preset":"islands#brownFoodIcon"}}]}}],"presetStorage":{"fillColor:ed4543cc_strokeColor:ed4543f2_strokeWidth:5":{"fillColor":"ed4543cc","strokeColor":"ed4543f2","strokeWidth":5}}};
+    </script>
