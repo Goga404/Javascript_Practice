@@ -14,15 +14,16 @@
             jsMap = new ymaps.Map("jsmap", mymap.state);
             
                 
-                mymap.geoObjects.features.forEach(function (item, i, arr) {
+                mymap.geoObjects.features.forEach(function (item, i, arr) { // обрабатываем данные
+                
                     if(item.geometry.type=='Polygon'){
                         
-                    var reverseCoord = item.geometry.coordinates[0].map(function (name) {
+                    var reverseCoord = item.geometry.coordinates[0].map(function (name) { // координаты перевернуты оО
                         return name.reverse();
                     });
                     
                     
-                    item.geometry.coordinates[0] = reverseCoord;
+                    item.geometry.coordinates[0] = reverseCoord; 
                     deliveryZones = myGeoObject[i] = new ymaps.GeoObject(item);
                     // console.log(reverseCoord);
                     jsMap.geoObjects.add(myGeoObject[i]); // установка областей доставки
@@ -33,6 +34,7 @@
                         myGeoObject[i] = new ymaps.GeoObject(item);
                         jsMap.geoObjects.add(myGeoObject[i]);
                     }
+                    
                 });
                 
             
@@ -94,8 +96,6 @@
                 //$(".total_submit.disabled").removeClass("disabled");
                 geocode();
                 
-                // $("#suggest").focus();
-                // $(document).focus();
             })
 
             $("#suggest").bind('blur', function (e) {
@@ -112,14 +112,14 @@
                 // Геокодируем введённые данные.
                 
                 ymaps.geocode(request
-                , {
-                    boundedBy: [
-                          [53.789054, 27.350829],
-                          [53.978449, 27.690507]
-                    ],
-                    strictBounds: true,
-                    results: 1
-                 }
+                // , {
+                //     boundedBy: [ // квадратная область ограничения поиска, не подходит для поиска по регионам
+                //           [53.789054, 27.350829],
+                //           [53.978449, 27.690507]
+                //     ],
+                //     strictBounds: true,
+                //     results: 1
+                //  }
                  ).then(function (res) {
                     var obj = res.geoObjects.get(0),
                             error, hint;
@@ -128,6 +128,8 @@
                         coords = object.geometry.getCoordinates(),
                         address = object.getAddressLine(),
                         deliveryAvaliable;
+                        
+                        console.log(coords);
                         
                         jsMap.geoObjects.each(function(e){
 
@@ -142,9 +144,9 @@
                             }
                         });
                         
-                        console.log(deliveryAvaliable);
+                        //console.log(deliveryAvaliable);
                     
-                    if (deliveryAvaliable === true) {
+                    if (deliveryAvaliable) {
                         error = 'Адрес входит в зону доставки';
                         hint = 'Возможна доставка по этому адресу';
                     } else {
@@ -165,9 +167,6 @@
                             showResult(obj);
                         }
                     
-                }
-                , function (e) {
-                    console.log(e)
                 })
 
             }
