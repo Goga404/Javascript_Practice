@@ -70,6 +70,7 @@
             // suggestView = new ymaps.SuggestView('suggest'),
                     map,
                     placemark,
+                    addrPlacemark,
                     addr_str;
                     
                     
@@ -127,9 +128,9 @@
                     var object = res.geoObjects.get(0),
                         coords = object.geometry.getCoordinates(),
                         address = object.getAddressLine(),
-                        deliveryAvaliable;
+                        deliveryAvaliable; // флаг доступности доставки
                         
-                        console.log(coords);
+                        //console.log(coords);
                         
                         jsMap.geoObjects.each(function(e){
 
@@ -145,6 +146,70 @@
                         });
                         
                         //console.log(deliveryAvaliable);
+                        //console.log(addrPlacemark);
+                        
+                        function removeOldMark(markName){ // удаление предыдущей метки
+                            if(markName){
+                                jsMap.geoObjects.remove(markName);
+                            }
+                        }
+
+
+                        if (deliveryAvaliable) { // ставим марку на полученый адрес (возможна доставка)
+                            
+                            let prom = new Promise((resolve, reject)=>{
+                                removeOldMark(addrPlacemark);
+                                resolve();
+                            })
+                            prom.then(()=>{
+                                // Создание метки по введенным координатам:
+                                addrPlacemark = new ymaps.Placemark(coords, {
+                                    hintContent: 'Адрес доставки',
+                                    balloonContent: 'Пицца будет доставлена по этому адресу'
+                                }, {
+                                    // Опции.
+                                    // Необходимо указать данный тип макета.
+                                    iconLayout: 'default#image',
+                                    // Своё изображение иконки метки.
+                                    iconImageHref: 'assets/template/img/add_ok.png',
+                                    // Размеры метки.
+                                    iconImageSize: [30, 42],
+                                    // Смещение левого верхнего угла иконки относительно
+                                    // её "ножки" (точки привязки).
+                                    iconImageOffset: [-5, -38]
+                                });
+                                jsMap.geoObjects.add(addrPlacemark);
+                            })
+                            
+                        } else { // ставим марку на полученый адрес (Доставка НЕвозможна)
+                            
+                            let prom = new Promise((resolve, reject)=>{
+                                removeOldMark(addrPlacemark);
+                                resolve();
+                            })
+                            prom.then(()=>{
+                                // Создание метки по введенным координатам:
+                                addrPlacemark = new ymaps.Placemark(coords, {
+                                    hintContent: 'Адрес доставки',
+                                    balloonContent: 'Пицца будет доставлена по этому адресу'
+                                }, {
+                                    // Опции.
+                                    // Необходимо указать данный тип макета.
+                                    iconLayout: 'default#image',
+                                    // Своё изображение иконки метки.
+                                    iconImageHref: 'assets/template/img/addr_bad.png',
+                                    // Размеры метки.
+                                    iconImageSize: [30, 42],
+                                    // Смещение левого верхнего угла иконки относительно
+                                    // её "ножки" (точки привязки).
+                                    iconImageOffset: [-5, -38]
+                                });
+                                jsMap.geoObjects.add(addrPlacemark);
+                            })
+                            
+                        }
+                        
+                        
                     
                     if (deliveryAvaliable) {
                         error = 'Адрес входит в зону доставки';
@@ -195,7 +260,6 @@
         }
     }
     // map end.
-
 
 
 
